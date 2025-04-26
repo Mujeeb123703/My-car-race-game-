@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Realistic Speed Racer</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #111; font-family: 'Segoe UI', sans-serif; }
+
+    #gameArea {
+      position: relative;
+      width: 400px;
+      height: 600px;
+      margin: 30px auto;
+      background: radial-gradient(circle at center, #333 0%, #111 100%);
+      overflow: hidden;
+      border: 7px solid #fff;
+      box-shadow: 0 0 40px #0f0;
+    }
+
+    #player {
+      position: absolute;
+      width: 50px;
+      height: 90px;
+      bottom: 20px;
+      left: 175px;
+      background: linear-gradient(to top, #e00, #f90);
+      border-radius: 11px;
+      border: 2px solid #fff;
+      box-shadow: 0 0 15px #f00;
+      transform: perspective(300px) rotateX(15deg);
+      z-index: 2;
+    }
+
+    .enemy {
+      position: absolute;
+      width: 50px;
+      height: 90px;
+      background: linear-gradient(to bottom, #999, #222);
+      top: -100px;
+      border-radius: 10px;
+      border: 2px solid #eee;
+      box-shadow: 0 0 10px #999;
+      z-index: 2;
+    }
+
+    .line {
+      position: absolute;
+      width: 10px;
+      height: 60px;
+      background: rgba(255, 255, 255, 0.8);
+      left: 195px;
+      animation: moveLines 0.8s linear infinite;
+      z-index: 1;
+    }
+
+    .building {
+      position: absolute;
+      width: 40px;
+      height: 100%;
+      background: repeating-linear-gradient(#444, #555 20px);
+      opacity: 0.7;
+      z-index: 0;
+    }
+
+    .building.left { left: 0; }
+    .building.right { right: 0; }
+
+    #score {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: #0f0;
+      font-size: 22px;
+      font-weight: bold;
+      text-shadow: 0 0 5px #0f0;
+      z-index: 3;
+    }
+
+    #startBtn, #restartBtn {
+      position: absolute;
+      top: 260px;
+      left: 90px;
+      padding: 15px 40px;
+      font-size: 20px;
+      border: none;
+      border-radius: 10px;
+      background: lime;
+      color: #000;
+      cursor: pointer;
+      z-index: 4;
+      box-shadow: 0 0 10px #0f0;
+    }
+
+    #restartBtn { display: none; }
+
+    #leftBtn, #rightBtn {
+      position: absolute;
+      bottom: 10px;
+      width: 60px;
+      height: 60px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid #fff;
+      border-radius: 50%;
+      font-size: 28px;
+      color: #fff;
+      z-index: 4;
+    }
+
+    #leftBtn { left: 10px; }
+    #rightBtn { right: 10px; }
+
+    @keyframes moveLines {
+      0% { top: -60px; }
+      100% { top: 600px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="gameArea">
+    <div class="building left"></div>
+    <div class="building right"></div>
+    <div id="score">Score: 0</div>
+    <div id="player"></div>
+    <button id="startBtn">Start</button>
+    <button id="restartBtn">Restart</button>
+    <button id="leftBtn">&#8592;</button>
+    <button id="rightBtn">&#8594;</button>
+  </div>
+
+  <script>
+    const gameArea = document.getElementById("gameArea");
+    const player = document.getElementById("player");
+    const startBtn = document.getElementById("startBtn");
+    const restartBtn = document.getElementById("restartBtn");
+    const scoreEl = document.getElementById("score");
+    const leftBtn = document.getElementById("leftBtn");
+    const rightBtn = document.getElementById("rightBtn");
+
+    let enemies = [];
+    let lines = [];
+    let gameInterval;
+    let score = 0;
+    let isPlaying = false;
+
+    const moveStep = 70;
+
+    function createLines() {
+      for (let i = 0; i < 10; i++) {
+        const line = document.createElement("div");
+        line.classList.add("line");
+        line.style.top = (i * 70) + "px";
+        gameArea.appendChild(line);
+        lines.push(line);
+      }
+    }
+
+    function startGame() {
+      score = 0;
+      scoreEl.innerText = "Score: 0";
+      startBtn.style.display = "none";
+      restartBtn.style.display = "none";
+      player.style.left = "175px";
+
+      enemies.forEach(e => e.remove());
+      lines.forEach(l => l.remove());
+      enemies = [];
+      lines = [];
+
+      createEnemies();
+      createLines();
+
+      isPlaying = true;
+      gameInterval = setInterval(() => {
+        moveEnemies();
+        checkCollisions();
+      }, 20);
+    }
+
+    function endGame() {
+      clearInterval(gameInterval);
+      isPlaying = false;
+      restartBtn.style.display = "block";
+    }
+
+    function createEnemies() {
+      for (let i = 0; i < 3; i++) {
+        const enemy = document.createElement("div");
+        enemy.classList.add("enemy");
+        enemy.style.left = (50 + Math.floor(Math.random() * 300)) + "px";
+        enemy.style.top = (-i * 200) + "px";
+        gameArea.appendChild(enemy);
+        enemies.push(enemy);
+      }
+    }
+
+    function moveEnemies() {
+      enemies.forEach(enemy => {
+        let top = parseInt(enemy.style.top);
+        enemy.style.top = (top + 8) + "px";
+
+        if (top > 600) {
+          enemy.style.top = "-100px";
+          enemy.style.left = (50 + Math.floor(Math.random() * 300)) + "px";
+          score++;
+          scoreEl.innerText = "Score: " + score;
+        }
+      });
+    }
+
+    function checkCollisions() {
+      enemies.forEach(enemy => {
+        if (isColliding(player, enemy)) {
+          endGame();
+        }
+      });
+    }
+
+    function isColliding(a, b) {
+      const aRect = a.getBoundingClientRect();
+      const bRect = b.getBoundingClientRect();
+      return !(
+        aRect.top > bRect.bottom ||
+        aRect.bottom < bRect.top ||
+        aRect.right < bRect.left ||
+        aRect.left > bRect.right
+      );
+    }
+
+    function movePlayer(dir) {
+      if (!isPlaying) return;
+      let left = parseInt(window.getComputedStyle(player).left);
+      if (dir === "left" && left > 10) {
+        player.style.left = (left - moveStep) + "px";
+      }
+      if (dir === "right" && left < 340) {
+        player.style.left = (left + moveStep) + "px";
+      }
+    }
+
+    document.addEventListener("keydown", e => {
+      if (e.key === "ArrowLeft") movePlayer("left");
+      if (e.key === "ArrowRight") movePlayer("right");
+    });
+
+    let leftInterval, rightInterval;
+
+    leftBtn.addEventListener("mousedown", () => {
+      leftInterval = setInterval(() => movePlayer("left"), 30);
+    });
+    rightBtn.addEventListener("mousedown", () => {
+      rightInterval = setInterval(() => movePlayer("right"), 30);
+    });
+    document.addEventListener("mouseup", () => {
+      clearInterval(leftInterval);
+      clearInterval(rightInterval);
+    });
+
+    leftBtn.addEventListener("touchstart", () => {
+      leftInterval = setInterval(() => movePlayer("left"), 70);
+    });
+    rightBtn.addEventListener("touchstart", () => {
+      rightInterval = setInterval(() => movePlayer("right"), 70);
+    });
+    document.addEventListener("touchend", () => {
+      clearInterval(leftInterval);
+      clearInterval(rightInterval);
+    });
+<img id="player" src="blue-car.png" alt="Player Car">
+    startBtn.addEventListener("click", startGame);
+    restartBtn.addEventListener("click", startGame);
+  </script>
+</body>
+</html>
